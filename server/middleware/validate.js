@@ -1,0 +1,29 @@
+'use strict';
+
+const ApiError = require('../utils/ApiError');
+
+/**
+ * Zod validation middleware
+ * @param {import('zod').ZodSchema} schema - Zod schema to validate against
+ * @returns {Function} Express middleware
+ */
+const validate = (schema) => {
+  return (req, _res, next) => {
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      const errors = result.error.errors.map((e) => ({
+        field: e.path.join('.'),
+        message: e.message,
+      }));
+      const message = errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      return next(new ApiError(400, `Validation failed: ${message}`, errors));
+    }
+
+    // Replace req.body with parsed/validated data
+    req.body = result.data;
+    next();
+  };
+};
+
+module.exports = validate;
